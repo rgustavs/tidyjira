@@ -1,0 +1,14 @@
+Package: tidyJira
+Type: Package
+Title: Tidy exports of jira data
+Version: 0.1.0
+Author: Richard Gustavsson [aut, cre]
+Maintainer: Richard Gustavsson <rgustavs@gmail.com>
+Description: Tidy data export of jira issues. Data set includes issues and issues worklog. Integration is based on REST api
+ and authentication based on login/password.
+Imports: dplyr, httr, jsonlite, lubridate
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Suggests: testthat
+RoxygenNote: 6.0.1
