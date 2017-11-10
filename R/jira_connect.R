@@ -4,12 +4,13 @@
 #' @param host 
 #' @param user 
 #' @param password 
+#' @param project 
 #'
 #' @return
 #' @export
 #'
 #' @examples
-jira_connect <- function(host, user, password) {
+jira_connect <- function(host, user, password, project = NULL) {
   if(is.null(host))
     stop('host is NULL.')
   
@@ -27,9 +28,25 @@ jira_connect <- function(host, user, password) {
   if(length(res) != 1) {
     stop(paste0("Cannot connect to host:", host))
   }
+  con <- list(user=user, password=password, host=host)
+  
+  #Project parameter
+  if(!is.null(project)) {
+    url <- file.path(host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&&maxResults=1'))
+    res <- jira_get(url = url, user = user, password = password)
+    res <- res$issues
+    
+    if(length(res) == 1){
+      #working project
+      con$project <- project
+    } else {
+      #failed to connect to project
+      stop(paste0("No issues returned for project:", project))
+    }
+  }
+  
   
   #Return
-  con <- list(user=user, password=password, host=host)
   con
   
 }

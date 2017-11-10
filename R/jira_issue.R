@@ -19,20 +19,20 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
     # online query
     #
     #Check input - expecting 3 arguments
-    if(length(con) != 3)
+    if(length(con) != 3 && length(con) != 4)
       stop('Malformed connection')
     
     #Build query and execute
-    #url <- file.path(con$host, "rest/api/latest/search?project=TO&maxResults=1000")
-    #url <- file.path(con$host, "rest/api/latest/search?jql=assignee=marcgide&maxResults=1000")
-    #url <- file.path(con$host, "rest/api/2/TO/search?")
     position <- 0
     increment <- 100
     issue <- NULL
   
     repeat{ 
-      url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"TO"%20&startAt=', position, '&maxResults=', increment))
-      #url <- file.path(con$host, paste0('rest/api/latest/search?&startAt=', position, '&maxResults=', increment))
+      if(!is.null(con$project)){
+        url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&startAt=', position, '&maxResults=', increment))
+      } else {
+        url <- file.path(con$host, paste0('rest/api/latest/search?&startAt=', position, '&maxResults=', increment))
+      }
       url
       res <- jira_get(url = url, user = con$user, password = con$password, verbose = TRUE)
       issue_element <- jira_issue_raw_2_issue(res$issues)
@@ -63,10 +63,12 @@ jira_issue_raw_2_issue <- function(issue_raw){
     tibble(
       #Identifiers
       id = map_chr(., "id"),
-      key = map_chr(., "key"),
+      issue_key = map_chr(., "key"),
       summary = map_chr_hack(., ~ .x[["fields"]][["summary"]]),
       
-      #Category
+      #What project and categories
+      project_key = map_chr_hack(., ~ .x[["fields"]][["project"]][["key"]]),
+      project_id = map_chr_hack(., ~ .x[["fields"]][["project"]][["id"]]),
       issuetype_id = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["id"]]),
       issuetype_name = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["name"]]),
       
@@ -75,10 +77,10 @@ jira_issue_raw_2_issue <- function(issue_raw){
       
       #Who - creators,
       #resolution = map_chr_hack(., ~ .x[["fields"]][["resolution"]]),
-      creator_key = map_chr_hack(., ~ .x[["fields"]][["creator"]][["key"]]),
-      creator_name = map_chr_hack(., ~ .x[["fields"]][["creator"]][["name"]]),
-      assignee_key = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["key"]]),
-      assignee_name = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["name"]]),
+      #creator_key = map_chr_hack(., ~ .x[["fields"]][["creator"]][["key"]]),
+      issue_creator_email = map_chr_hack(., ~ .x[["fields"]][["creator"]][["emailAddress"]]),
+      #assignee_key = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["key"]]),
+      issue_assignee_email = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["emailAddress"]]),
       
       #Dates - when
       created_date = map_chr_hack(., ~ .x[["fields"]][["created"]]) %>% ymd_hms(),

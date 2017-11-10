@@ -1,4 +1,5 @@
 context("Jira issue")
+source("test_utils.R")
 issue <- jira_issue(con, issue_raw_file =  "./test_jira_issues_raw.RData")
 
 test_that("package test is working", {
