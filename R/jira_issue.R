@@ -29,14 +29,21 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
   
     repeat{ 
       if(!is.null(con$project)){
-        url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&startAt=', position, '&maxResults=', increment))
+        url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&expand=changelog&startAt=', position, '&maxResults=', increment))
       } else {
         url <- file.path(con$host, paste0('rest/api/latest/search?&startAt=', position, '&maxResults=', increment))
       }
       url
       res <- jira_get(url = url, user = con$user, password = con$password, verbose = TRUE)
+      
+      #work on issues
       issue_element <- jira_issue_raw_2_issue(res$issues)
       if(is.null(issue)){ issue <- issue_element } else {issue <- bind_rows(issue, issue_element)}
+      
+      #work on issue_change_log
+      
+      
+      #wrap up
       if( position + length(res$issues) > res$total){ break }
       print(paste0("position: ", position, "/", res$total))
       position <- position + increment
