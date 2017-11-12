@@ -81,6 +81,7 @@ jira_issue_raw_2_issue <- function(issue_raw){
       project_id = map_chr_hack(., ~ .x[["fields"]][["project"]][["id"]]),
       issuetype_id = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["id"]]),
       issuetype_name = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["name"]]),
+      changelog = map(., ~.x[["changelog"]] %>% as_tibble), 
       
       #Effort - How much
       timespent = map_chr_hack(., ~ .x[["fields"]][["timespent"]]) %>% as.numeric(),
