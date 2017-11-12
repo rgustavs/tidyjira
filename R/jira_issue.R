@@ -26,7 +26,8 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
     position <- 0
     increment <- 100
     issue <- NULL
-  
+
+    print("Getting issues:")  
     repeat{ 
       if(!is.null(con$project)){
         url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&expand=changelog&startAt=', position, '&maxResults=', increment))
@@ -45,7 +46,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
       
       #wrap up
       if( position + length(res$issues) > res$total){ break }
-      print(paste0("position: ", position, "/", res$total))
+      print(paste0("- position: ", position, "/", res$total))
       position <- position + increment
     }
   } else {
@@ -57,6 +58,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
       stop('Malformed raw file')
     issue <- jira_issue_raw_2_issue(issue_raw)
   }
+  print(paste0("Fetched all issues (",res$total ,"/",res$total ,")" ))
 
   #return
   issue
