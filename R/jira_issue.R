@@ -35,7 +35,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
         url <- file.path(con$host, paste0('rest/api/latest/search?&startAt=', position, '&maxResults=', increment))
       }
       url
-      res <- jira_get(url = url, user = con$user, password = con$password, verbose = TRUE)
+      res <- jira_get(con = con, url = url)
       
       #work on issues
       issue_element <- jira_issue_raw_2_issue(res$issues)
@@ -49,6 +49,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
       print(paste0("- position: ", position, "/", res$total))
       position <- position + increment
     }
+    print(paste0("Fetched all issues (",res$total ,"/",res$total ,")" ))
   } else {
     #
     # file based input
@@ -58,7 +59,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
       stop('Malformed raw file')
     issue <- jira_issue_raw_2_issue(issue_raw)
   }
-  print(paste0("Fetched all issues (",res$total ,"/",res$total ,")" ))
+  
 
   #return
   issue

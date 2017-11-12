@@ -39,7 +39,7 @@ jira_issue_worklog_element <- function(con, key){
   
   #Build query and execute
   url <- file.path(host, paste0("rest/api/2/issue/", key , "/worklog"))
-  res <- jira_get(url = url, user = con$user, password = con$password, verbose = verbose)
+  res <- jira_get(con = con, url = url)
   
   # Transform output
   issue_worklog_raw <- res$worklogs

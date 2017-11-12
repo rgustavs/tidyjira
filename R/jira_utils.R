@@ -17,19 +17,21 @@
 #'
 #' @examples
 #' 
-#' res <- jira_get(url = url, user = user, password = password)
+#' res <- jira_get(con, url)
 
-jira_get <- function(url = url, user = user, password = password, verbose = verbose){
+jira_get <- function(con, url){
+  
+  if(length(con) != 3 && length(con) != 4)
+    stop('Malformed connection')
   
   verbose <- TRUE
   res <- GET(url = url,
-    authenticate(user = user, password = password, "basic"),
+    authenticate(user = con$user, password = con$password, "basic"),
     add_headers("Content-Type" = "application/json")
     #verbose(data_out = verbose, data_in = verbose, info = verbose)
   )
-  res <- content(res, as = "parsed")
+  res <- content(res, type = "application/json;charset=UTF-8")
   
-  res$startAt 
   return(res)
 }
 
