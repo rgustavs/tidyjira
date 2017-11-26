@@ -30,7 +30,7 @@ jira_get <- function(con, url){
     add_headers("Content-Type" = "application/json")
     #verbose(data_out = verbose, data_in = verbose, info = verbose)
   )
-  res <- content(res, type = "application/json;charset=UTF-8")
+  #res <- content(res, type = "application/json;charset=UTF-8")
   
   return(res)
 }

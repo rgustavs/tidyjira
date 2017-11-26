@@ -12,7 +12,7 @@
 #' 
 #' issue <- jira_issue(con)
 #' issue <- jira_issue(issue_raw_file = "./issue_raw.RData")
-jira_issue <- function(con = NULL, issue_raw_file = NULL){
+jira_issue <- function(con = NULL, issue_raw_file = NULL, db_export = FALSE){
   
   if(is.null(issue_raw_file)){
     #
@@ -26,6 +26,7 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
     position <- 0
     increment <- 100
     issue <- NULL
+    issue_history <- NULL
 
     print("Getting issues:")  
     repeat{ 
@@ -38,18 +39,20 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
       res <- jira_get(con = con, url = url)
       
       #work on issues
-      issue_element <- jira_issue_raw_2_issue(res$issues)
+      r2 <- res %>% content(type = "application/json;charset=UTF-8")
+      issue_element <- jira_issue_raw_2_issue(r2$issues)
       if(is.null(issue)){ issue <- issue_element } else {issue <- bind_rows(issue, issue_element)}
       
       #work on issue_change_log
-      
+      issue_history_element <- jira_issue_history(res)
+      if(is.null(issue_history)){ issue_history <- issue_history_element } else {issue_history <- bind_rows(issue_history, issue_history_element)}
       
       #wrap up
-      if( position + length(res$issues) > res$total){ break }
-      print(paste0("- position: ", position, "/", res$total))
+      if( position + length(r2$issues) > r2$total){ break }
+      print(paste0("- position: ", position, "/", r2$total))
       position <- position + increment
     }
-    print(paste0("Fetched all issues (",res$total ,"/",res$total ,")" ))
+    print(paste0("Fetched all issues (",r2$total ,"/",r2$total ,")" ))
   } else {
     #
     # file based input
@@ -62,7 +65,12 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL){
   
 
   #return
-  issue
+  if(db_export == TRUE) { 
+    list(issue = issue, issue_history = issue_history) 
+  } else { 
+    issue 
+  }
+  
   
 }    
 
@@ -81,7 +89,6 @@ jira_issue_raw_2_issue <- function(issue_raw){
       project_id = map_chr_hack(., ~ .x[["fields"]][["project"]][["id"]]),
       issuetype_id = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["id"]]),
       issuetype_name = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["name"]]),
-      changelog = map(., ~.x[["changelog"]] %>% as_tibble %>% select(-histories)), 
       
       #Effort - How much
       timespent_hours = map_chr_hack(., ~ .x[["fields"]][["timespent"]]) %>% as.numeric()/3600,

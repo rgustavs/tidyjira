@@ -10,7 +10,7 @@
 #' issue_worklog <- jira_issue_worklog(con, issue)
 jira_issue_worklog <- function(con, issue){
   
-  i <- issue %>% filter(as.numeric(timespent)>0)
+  i <- issue %>% filter(as.numeric(timespent_hours)>0)
   r <- map(i$issue_key, ~ jira_issue_worklog_element(con,.x))
   a <- bind_rows(r)
   
@@ -39,7 +39,7 @@ jira_issue_worklog_element <- function(con, key){
   
   #Build query and execute
   url <- file.path(host, paste0("rest/api/2/issue/", key , "/worklog"))
-  res <- jira_get(con = con, url = url)
+  res <- jira_get(con = con, url = url) %>% content(type = "application/json;charset=UTF-8")
   
   # Transform output
   issue_worklog_raw <- res$worklogs
