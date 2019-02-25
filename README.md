@@ -3,7 +3,7 @@ tidy formatatted exports of jira issues and issue worklog items
 
 Prepare
 ```
-library(purrr)
+library(tidyverse)
 library(dplyr)
 library(readr)
 library(httr)

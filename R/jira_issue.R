@@ -3,7 +3,6 @@
 #' input can either be a a jira connection or a file with raw data
 #' 
 #' @param con - a jira connection object
-#' @param raw_issue_file - instead of alternative to online query. 
 #'
 #' @return a data frame containing issues
 #' @export
@@ -11,7 +10,6 @@
 #' @examples
 #' 
 #' issue <- jira_issue(con)
-#' issue <- jira_issue(issue_raw_file = "./issue_raw.RData")
 jira_issue <- function(con = NULL, issue_raw_file = NULL, db_export = FALSE){
   
   if(is.null(issue_raw_file)){
@@ -24,89 +22,52 @@ jira_issue <- function(con = NULL, issue_raw_file = NULL, db_export = FALSE){
     
     #Build query and execute
     position <- 0
-    increment <- 100
+    increment <- 50
     issue <- NULL
     issue_history <- NULL
 
     print("Getting issues:")  
     repeat{ 
       if(!is.null(con$project)){
-        url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', project, '"%20&expand=changelog&startAt=', position, '&maxResults=', increment))
+        url <- file.path(con$host, paste0('rest/api/latest/search?jql=project%20%3D%20"', con$project, '"%20&expand=changelog&startAt=', position, '&maxResults=', increment))
       } else {
         url <- file.path(con$host, paste0('rest/api/latest/search?&startAt=', position, '&maxResults=', increment))
       }
-      url
-      res <- jira_get(con = con, url = url)
+      r <- jira_get(con = con, url = url) %>% content('text', encoding = 'UTF-8') %>% fromJSON()
       
       #work on issues
-      r2 <- res %>% content(type = "application/json;charset=UTF-8")
-      issue_element <- jira_issue_raw_2_issue(r2$issues)
+      issue_element <- r %>% select_issues()
       if(is.null(issue)){ issue <- issue_element } else {issue <- bind_rows(issue, issue_element)}
       
-      #work on issue_change_log
-      issue_history_element <- jira_issue_history(res)
-      if(is.null(issue_history)){ issue_history <- issue_history_element } else {issue_history <- bind_rows(issue_history, issue_history_element)}
-      
       #wrap up
-      if( position + length(r2$issues) > r2$total){ break }
-      print(paste0("- position: ", position, "/", r2$total))
+      if( position + nrow(r$issues) >= r$total){ break }
+      print(paste0("- position: ", position, "/", r$total))
       position <- position + increment
     }
-    print(paste0("Fetched all issues (",r2$total ,"/",r2$total ,")" ))
-  } else {
-    #
-    # file based input
-    #
-    load(issue_raw_file)
-    if( !(exists("issue_raw")) )
-      stop('Malformed raw file')
-    issue <- jira_issue_raw_2_issue(issue_raw)
+    print(paste0("Fetched all issues (",r$total ,"/",r$total ,")" ))
   }
   
-
   #return
-  if(db_export == TRUE) { 
-    list(issue = issue, issue_history = issue_history) 
-  } else { 
-    issue 
-  }
-  
+  issue 
+
   
 }    
 
-jira_issue_raw_2_issue <- function(issue_raw){
+select_issues <- function(r){
   # Transform output
-  # using pattern from https://jennybc.github.io/purrr-tutorial/ls01_map-name-position-shortcuts.html
-  issue <-  issue_raw %>% {
-    tibble(
-      #Identifiers
-      id = map_chr(., "id"),
-      issue_key = map_chr(., "key"),
-      summary = map_chr_hack(., ~ .x[["fields"]][["summary"]]),
-      
-      #What project and categories
-      project_key = map_chr_hack(., ~ .x[["fields"]][["project"]][["key"]]),
-      project_id = map_chr_hack(., ~ .x[["fields"]][["project"]][["id"]]),
-      issuetype_id = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["id"]]),
-      issuetype_name = map_chr_hack(., ~ .x[["fields"]][["issuetype"]][["name"]]),
-      
-      #Effort - How much
-      timespent_hours = map_chr_hack(., ~ .x[["fields"]][["timespent"]]) %>% as.numeric()/3600,
-      
-      #Who - creators,
-      #resolution = map_chr_hack(., ~ .x[["fields"]][["resolution"]]),
-      #creator_key = map_chr_hack(., ~ .x[["fields"]][["creator"]][["key"]]),
-      issue_creator_email = map_chr_hack(., ~ .x[["fields"]][["creator"]][["emailAddress"]]),
-      #assignee_key = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["key"]]),
-      issue_assignee_email = map_chr_hack(., ~ .x[["fields"]][["assignee"]][["emailAddress"]]),
-      
-      #Dates - when
-      created_date = map_chr_hack(., ~ .x[["fields"]][["created"]]) %>% ymd_hms(),
-      resolution_date = map_chr_hack(., ~ .x[["fields"]][["resolutiondate"]]) %>% ymd_hms(),
-      last_viewed_date = map_chr_hack(., ~ .x[["fields"]][["lastViewed"]]) %>% ymd_hms()
-    )
-  }
+  a <- r$issues %>% select(id,key)
+  b <- r$issues$fields %>% select(summary, created, resolutiondate, lastViewed, timespent, customfield_10018) %>% rename(epic_key = customfield_10018) %>% rename(created_date = created, resolution_date = resolutiondate, last_viewed_date = lastViewed) %>% mutate(created_date = ymd(substr(created_date,1,10)), resolution_date = ymd(substr(resolution_date,1,10)), last_viewed_date = ymd(substr(last_viewed_date,1,10)), summary = substr(summary,1,60))
+  c <- r$issues$fields$project %>% select(id, key) %>% rename(project_id = id, project_key = key)
+  d <- r$issues$fields$issuetype %>% select(id, name) %>% rename(issue_type_id = id, issue_type = name)
+  e <- r$issues$fields$assignee %>% select(displayName, emailAddress) %>% rename(assignee_name = displayName, assignee_email = emailAddress)
+  f <- r$issues$fields$reporter %>% select(displayName, emailAddress) %>% rename(reporter_name = displayName, reporter_email = emailAddress)
+  
+  o <- bind_cols(a,b,c,d,e,f)
+  o <- o %>% mutate(
+    
+  )
+  
   #return
-  issue
+  o
   
 }
